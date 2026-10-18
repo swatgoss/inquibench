@@ -64,8 +64,12 @@ Remote hardware topology interrogation (IRQs, DMAs, PCI bus, memory mapping) and
 
 ```text
 ├── guest/                     # Guest retro software (DOS / FreeDOS)
-│   ├── inquiben.asm           # Source code in 16-bit x86 assembly
-│   └── inquiben.com           # Standalone 8.3 DOS binary (1.1 KB)
+│   ├── inquiben.asm           # InquiBench main daemon in 16-bit assembly
+│   ├── inquiben.com           # Standalone 8.3 DOS daemon binary (1.1 KB)
+│   ├── pciscan.asm            # PCI bus topology scanner in 16-bit assembly
+│   ├── pciscan.com            # Standalone 8.3 DOS PCI scanner binary (2.6 KB)
+│   ├── hwprobe.asm            # Comprehensive hardware profiler (CPU, BIOS, RAM, PCI)
+│   └── hwprobe.com            # Standalone 8.3 DOS hardware profiler binary (3.4 KB)
 ├── host/                      # Host tools & communication bridge
 │   ├── inquibench.py          # Main InquiBench CLI tool
 │   ├── host_bridge.py         # Serial communication bridge (Pipe / COM)
@@ -128,6 +132,25 @@ python -m pip install pyserial
 Run automated end-to-end tests (PING, VER, DIR, READ_SCREEN):
 ```powershell
 python host/test_agent.py
+```
+
+Interrogate full system hardware (CPU, clock, BIOS, RAM, PCI):
+```powershell
+python host/inquibench.py probe
+```
+
+Display PCI bus topology in Linux `lspci -tvnn` tree format:
+```powershell
+python host/inquibench.py lspci -tvnn
+```
+
+Or query PCI devices using standard `lspci` options:
+```powershell
+python host/inquibench.py lspci          # Standard list view
+python host/inquibench.py lspci -t       # Compact bus tree
+python host/inquibench.py lspci -nn      # List with [class] and [vendor:device] numeric IDs
+python host/inquibench.py lspci -v       # Verbose list with BAR memory/IO ranges and IRQs
+python host/inquibench.py pci --raw      # Raw DOS output from guest D:\PCISCAN.COM
 ```
 
 Launch the interactive remote DOS shell:
