@@ -10,6 +10,7 @@ import struct
 import argparse
 import ctypes
 from ctypes import wintypes
+from lspci import parse_pciscan_output, format_lspci, update_pci_ids
 
 # Win32 API constants for Named Pipe
 GENERIC_READ = 0x80000000
@@ -233,9 +234,49 @@ def main():
     put_p.add_argument('local_path', help='Local file path')
     put_p.add_argument('remote_name', help='Remote DOS file path (e.g. D:\\TEST.TXT)')
 
+    pci_p = subparsers.add_parser('pci', help='Interrogate and display PCI bus topology')
+    pci_p.add_argument('-t', action='store_true', help='Show tree diagram of PCI bus')
+    pci_p.add_argument('-v', action='count', default=0, help='Be verbose')
+    pci_p.add_argument('-n', action='count', default=0, help='Show numeric IDs (-n) or numeric + names (-nn)')
+    pci_p.add_argument('-tvnn', action='store_true', help='Tree view with verbose details and numeric+name IDs')
+    pci_p.add_argument('--raw', action='store_true', help='Show raw guest PCISCAN.COM output')
+    pci_p.add_argument('--file', help='Process an offline PCISCAN/HWPROBE report file instead of querying serial')
+    pci_p.add_argument('--update-ids', action='store_true', help='Download latest official pci.ids database')
+
+    lspci_p = subparsers.add_parser('lspci', help='Display PCI bus topology in Linux lspci format')
+    lspci_p.add_argument('-t', action='store_true', help='Show tree diagram of PCI bus')
+    lspci_p.add_argument('-v', action='count', default=0, help='Be verbose')
+    lspci_p.add_argument('-n', action='count', default=0, help='Show numeric IDs (-n) or numeric + names (-nn)')
+    lspci_p.add_argument('-tvnn', action='store_true', help='Tree view with verbose details and numeric+name IDs')
+    lspci_p.add_argument('--raw', action='store_true', help='Show raw guest PCISCAN.COM output')
+    lspci_p.add_argument('--file', help='Process an offline PCISCAN/HWPROBE report file instead of querying serial')
+    lspci_p.add_argument('--update-ids', action='store_true', help='Download latest official pci.ids database')
+
+    subparsers.add_parser('probe', help='Comprehensive hardware interrogation (CPU, BIOS, Chipset, RAM, PCI)')
+
     subparsers.add_parser('shell', help='Interactive DOS remote shell')
 
     args = parser.parse_args()
+
+    if getattr(args, 'update_ids', False):
+        print("[*] Downloading latest official pci.ids database...")
+        path = update_pci_ids()
+        print(f"[+] pci.ids successfully updated at {path}")
+
+    # Offline file processing without serial connection
+    if getattr(args, 'file', None):
+        with open(args.file, 'r', encoding='utf-8', errors='ignore') as f:
+            out = f.read()
+        if getattr(args, 'raw', False):
+            print(out)
+        else:
+            is_tree = args.t or getattr(args, 'tvnn', False)
+            verb = max(args.v, 1 if getattr(args, 'tvnn', False) else 0)
+            num = max(args.n, 2 if getattr(args, 'tvnn', False) else 0)
+            devs = parse_pciscan_output(out)
+            formatted = format_lspci(devs, tree=is_tree, verbose=verb, numeric=num)
+            print(formatted)
+        return
 
     bridge = DOSSerialBridge(endpoint=args.endpoint, baudrate=args.baud)
     print(f"Connecting to {args.endpoint}...")
@@ -249,6 +290,23 @@ def main():
 
         elif args.action == 'exec':
             out = bridge.exec(args.cmd)
+            print(out)
+
+        elif args.action in ('pci', 'lspci'):
+            out = bridge.exec("D:\\PCISCAN.COM")
+            if getattr(args, 'raw', False):
+                print(out)
+            else:
+                is_tree = args.t or getattr(args, 'tvnn', False)
+                verb = max(args.v, 1 if getattr(args, 'tvnn', False) else 0)
+                num = max(args.n, 2 if getattr(args, 'tvnn', False) else 0)
+                devs = parse_pciscan_output(out)
+                formatted = format_lspci(devs, tree=is_tree, verbose=verb, numeric=num)
+                print(formatted)
+
+        elif args.action == 'probe':
+            print("[*] Interrogating full system hardware from guest...")
+            out = bridge.exec("D:\\HWPROBE.COM")
             print(out)
 
         elif args.action == 'screen':
