@@ -103,4 +103,4 @@ The host Python bridge uses an abstract transport layer:
 - **Virtual Mode (Verified):** Connects to Windows Named Pipe `\\.\pipe\86box_serial` (tested in 86Box v6.0).
 - **Physical Mode (Pending Validation):** Connects to serial port `COMx` via `pyserial` (to be validated in Phase 2).
 
-While the binary packet framing (`0x55 0xAA`) and guest daemon (`SERAGENT.COM`) are designed to be identical, only virtual transport has been validated to date.
+While the binary packet framing (`0x55 0xAA`) and guest daemon (`INQUIBEN.COM`) are designed to be identical, only virtual transport has been validated to date.
